@@ -1,0 +1,9 @@
+{
+  "Country": 0.05162,
+  "Device Type": 0.000802,
+  "Browser": 0.000751,
+  "OS": 0.001745,
+  "Network RTT": 0.396609,
+  "Attack IP Flag": 0.542825,
+  "Hour of Day": 0.005649
+}

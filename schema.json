@@ -1,0 +1,64 @@
+{
+  "features": [
+    "ce",
+    "de",
+    "be",
+    "oe",
+    "rtt_ms",
+    "is_attack_ip",
+    "hour_of_day"
+  ],
+  "feature_labels": {
+    "ce": "Country",
+    "de": "Device Type",
+    "be": "Browser",
+    "oe": "OS",
+    "rtt_ms": "Network RTT",
+    "is_attack_ip": "Attack IP Flag",
+    "hour_of_day": "Hour of Day"
+  },
+  "known_countries": [
+    "Australia",
+    "Belarus",
+    "Brazil",
+    "Canada",
+    "China",
+    "France",
+    "Germany",
+    "India",
+    "Iran",
+    "Japan",
+    "Netherlands",
+    "Nigeria",
+    "North Korea",
+    "Other",
+    "Russia",
+    "South Korea",
+    "United Kingdom",
+    "United States"
+  ],
+  "known_devices": [
+    "Desktop",
+    "Mobile",
+    "Tablet"
+  ],
+  "known_browsers": [
+    "Chrome",
+    "Edge",
+    "Firefox",
+    "Other",
+    "Safari"
+  ],
+  "known_os": [
+    "Android",
+    "Chrome OS",
+    "Linux",
+    "Windows 10",
+    "Windows 11",
+    "iOS",
+    "macOS"
+  ],
+  "auc_roc": 0.9974,
+  "trained_on": 60000,
+  "dataset_source": "Kaggle RBA Dataset"
+}

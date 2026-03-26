@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SmartGuard v4 — Adaptive Authentication</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#060a12;--bg2:#0d1220;--bg3:#111827;
+  --b1:rgba(59,130,246,0.12);--b2:rgba(59,130,246,0.28);
+  --ac:#3b82f6;--ac2:#60a5fa;
+  --g:#22c55e;--y:#f59e0b;--r:#ef4444;
+  --tx:#e2e8f0;--mu:#64748b;--mu2:#475569;
+  --mn:'Space Mono',monospace;--bd:'Syne',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--tx);font-family:var(--bd);min-height:100vh;overflow-x:hidden;}
+.gbg{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(59,130,246,0.03)1px,transparent 1px),
+    linear-gradient(90deg,rgba(59,130,246,0.03)1px,transparent 1px);background-size:60px 60px;}
+.grd{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(59,130,246,0.07),transparent 65%);}
+.pg{position:relative;z-index:1;display:none;min-height:100vh;}
+.pg.on{display:flex;flex-direction:column;}
+.card{background:var(--bg2);border:1px solid var(--b2);border-radius:18px;
+  box-shadow:0 0 60px rgba(59,130,246,0.07),inset 0 1px 0 rgba(255,255,255,0.04);}
+.lbl{font-family:var(--mn);font-size:10px;color:var(--mu);text-transform:uppercase;
+  letter-spacing:1.2px;display:block;margin-bottom:6px;}
+.inp{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--b2);
+  border-radius:9px;padding:12px 15px;color:var(--tx);font-size:14px;font-family:var(--bd);
+  outline:none;transition:border-color .2s,box-shadow .2s;}
+.inp:focus{border-color:var(--ac);box-shadow:0 0 0 3px rgba(59,130,246,0.11);}
+.inp::placeholder{color:var(--mu2);}
+.grp{margin-bottom:15px;}
+.gr2{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.btn{width:100%;background:var(--ac);border:none;border-radius:10px;padding:13px;
+  color:#fff;font-size:15px;font-weight:700;font-family:var(--bd);cursor:pointer;
+  transition:all .2s;box-shadow:0 4px 18px rgba(59,130,246,0.28);margin-top:5px;}
+.btn:hover{background:#2563eb;}.btn:active{transform:scale(.98);}
+.btn:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+.al{padding:11px 15px;border-radius:9px;font-size:13px;margin-bottom:13px;display:none;line-height:1.5;}
+.ae{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#fca5a5;}
+.ao{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:#86efac;}
+.ai{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:#fde68a;}
+.sp{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.2);
+  border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fi{animation:fi .3s ease;}
+@keyframes fi{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Login Page ── */
+#pg-login{align-items:center;justify-content:center;padding:36px 18px;}
+.brand{text-align:center;margin-bottom:32px;}
+.bn{font-size:30px;font-weight:800;letter-spacing:-1px;}
+.bn span{color:var(--ac2);}
+.bs{font-family:var(--mn);font-size:10px;color:var(--mu);letter-spacing:2px;margin-top:4px;}
+.login-wrap{width:100%;max-width:460px;}
+.lc{padding:34px 32px;}
+.tabs{display:flex;background:rgba(255,255,255,.03);border-radius:9px;padding:4px;margin-bottom:26px;}
+.tab{flex:1;padding:9px;border:none;background:transparent;color:var(--mu);
+  font-family:var(--mn);font-size:11px;cursor:pointer;border-radius:7px;transition:all .2s;}
+.tab.on{background:var(--ac);color:#fff;box-shadow:0 2px 10px rgba(59,130,246,.32);}
+.pn{display:none;}.pn.on{display:block;}
+.snote{margin-top:16px;padding:11px 13px;background:rgba(255,255,255,.02);
+  border:1px solid var(--b1);border-radius:9px;font-size:12px;line-height:1.8;color:var(--mu);}
+.snote code{font-family:var(--mn);color:var(--ac2);font-size:11px;}
+/* Location badge */
+.loc-badge{display:flex;align-items:center;gap:8px;background:rgba(34,197,94,.07);
+  border:1px solid rgba(34,197,94,.2);border-radius:9px;padding:10px 13px;margin-bottom:14px;font-size:12px;}
+.loc-dot{width:7px;height:7px;border-radius:50%;background:var(--g);flex-shrink:0;
+  animation:pg2 2s infinite;}
+.loc-txt{color:var(--mu);flex:1;}
+.loc-txt strong{color:var(--g);}
+.loc-warn{background:rgba(245,158,11,.07);border-color:rgba(245,158,11,.2);}
+.loc-warn .loc-dot{background:var(--y);}
+.loc-warn strong{color:var(--y)!important;}
+
+/* ── OTP Page ── */
+#pg-otp{align-items:center;justify-content:center;padding:36px 18px;}
+.otp-wrap{width:100%;max-width:440px;padding:34px 32px;}
+.oi{font-size:36px;text-align:center;margin-bottom:12px;}
+.ot{font-size:19px;font-weight:700;text-align:center;margin-bottom:5px;}
+.os{font-size:13px;color:var(--mu);text-align:center;line-height:1.6;margin-bottom:18px;}
+.oem{color:var(--ac2);font-family:var(--mn);}
+.sigs{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);
+  border-radius:9px;padding:13px;margin-bottom:16px;}
+.st{font-family:var(--mn);font-size:10px;color:var(--y);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;}
+.si{display:flex;align-items:flex-start;gap:8px;padding:3px 0;font-size:12px;color:var(--mu);}
+.sd{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.oinps{display:flex;gap:9px;justify-content:center;margin:0 0 18px;}
+.od{width:50px;height:56px;background:rgba(255,255,255,.04);border:1px solid var(--b2);
+  border-radius:11px;text-align:center;font-size:22px;font-weight:700;font-family:var(--mn);
+  color:var(--tx);outline:none;transition:all .2s;}
+.od:focus{border-color:var(--ac);box-shadow:0 0 0 3px rgba(59,130,246,.14);}
+.lnk{background:transparent;border:none;color:var(--mu);font-size:12px;cursor:pointer;
+  text-decoration:underline;font-family:var(--bd);}
+.lnk:hover{color:var(--ac2);}
+/* OTP timer */
+.otp-timer{text-align:center;font-family:var(--mn);font-size:12px;color:var(--mu);margin-bottom:12px;}
+.otp-timer span{color:var(--y);font-weight:700;}
+/* Block page */
+#pg-block{align-items:center;justify-content:center;padding:40px 18px;}
+.blk-wrap{width:100%;max-width:440px;padding:44px 36px;text-align:center;border-color:rgba(239,68,68,.3);}
+.blk-icon{font-size:64px;margin-bottom:16px;animation:shake .5s ease;}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.blk-title{font-size:24px;font-weight:800;color:var(--r);margin-bottom:8px;}
+.blk-sub{color:var(--mu);font-size:13px;line-height:1.7;margin-bottom:20px;}
+.blk-reasons{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);
+  border-radius:10px;padding:14px;margin-bottom:20px;text-align:left;}
+.blk-r-title{font-family:var(--mn);font-size:10px;color:var(--r);text-transform:uppercase;
+  letter-spacing:1px;margin-bottom:9px;}
+.blk-item{display:flex;align-items:flex-start;gap:9px;padding:4px 0;font-size:12px;color:var(--mu);}
+.blk-sev{font-family:var(--mn);font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;white-space:nowrap;margin-top:1px;}
+.sev-critical{background:rgba(239,68,68,.2);color:#f87171;}
+.sev-high{background:rgba(245,158,11,.2);color:#fbbf24;}
+.sev-medium{background:rgba(59,130,246,.2);color:#93c5fd;}
+.risk-pill{display:inline-flex;align-items:center;gap:8px;background:rgba(239,68,68,.08);
+  border:1px solid rgba(239,68,68,.2);border-radius:20px;padding:9px 18px;
+  font-family:var(--mn);font-size:13px;color:var(--r);margin-bottom:16px;}
+
+/* ── Success ── */
+#pg-ok{align-items:center;justify-content:center;padding:40px 18px;}
+.okc{width:100%;max-width:420px;padding:44px 36px;text-align:center;border-color:rgba(34,197,94,.3);}
+.oki{font-size:60px;margin-bottom:16px;animation:pop .4s ease;}
+@keyframes pop{0%{transform:scale(0)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+.okt{font-size:24px;font-weight:800;color:var(--g);margin-bottom:7px;}
+.oks{color:var(--mu);font-size:14px;line-height:1.6;margin-bottom:22px;}
+.pill{display:inline-flex;align-items:center;gap:8px;background:rgba(34,197,94,.08);
+  border:1px solid rgba(34,197,94,.2);border-radius:20px;padding:9px 18px;
+  font-family:var(--mn);font-size:12px;color:var(--g);}
+.sbtn{background:transparent;border:1px solid var(--b2);border-radius:9px;padding:11px 22px;
+  color:var(--mu);font-size:12px;font-family:var(--mn);cursor:pointer;transition:all .2s;
+  margin-top:18px;display:inline-block;}
+.sbtn:hover{border-color:var(--ac2);color:var(--ac2);}
+
+/* ── Topbar ── */
+.tb{position:sticky;top:0;z-index:50;background:rgba(6,10,18,.95);
+  backdrop-filter:blur(20px);border-bottom:1px solid var(--b1);
+  padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;}
+.tbl{font-size:17px;font-weight:800;}.tbl span{color:var(--ac2);}
+.tnav{display:flex;gap:3px;}
+.nb{background:transparent;border:none;padding:8px 14px;color:var(--mu);font-size:11px;
+  font-family:var(--mn);cursor:pointer;border-radius:7px;transition:all .2s;}
+.nb:hover{background:rgba(255,255,255,.05);color:var(--tx);}
+.nb.on{background:rgba(59,130,246,.12);color:var(--ac2);}
+.tbr{display:flex;align-items:center;gap:12px;}
+.av{width:30px;height:30px;background:var(--ac);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;}
+.ld{width:7px;height:7px;border-radius:50%;background:var(--g);
+  box-shadow:0 0 6px rgba(34,197,94,.6);animation:pg2 2s infinite;}
+@keyframes pg2{0%,100%{opacity:1}50%{opacity:.4}}
+.xbtn{background:transparent;border:1px solid var(--b2);border-radius:7px;
+  padding:6px 13px;color:var(--mu);font-size:10px;font-family:var(--mn);cursor:pointer;transition:all .2s;}
+.xbtn:hover{border-color:rgba(239,68,68,.4);color:#fca5a5;}
+.pbtn{background:transparent;border:1px solid var(--b1);border-radius:7px;
+  padding:6px 13px;color:var(--mu);font-size:10px;font-family:var(--mn);cursor:pointer;transition:all .2s;}
+.pbtn:hover{border-color:var(--b2);color:var(--tx);}
+
+/* ── Dashboard ── */
+#pg-dash{flex-direction:column;}
+.db{padding:24px 28px;max-width:1500px;margin:0 auto;width:100%;}
+.tbanner{background:var(--bg2);border:1px solid var(--b1);border-radius:14px;
+  padding:16px 24px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;}
+.thlbl{font-family:var(--mn);font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;}
+.thv{font-size:24px;font-weight:800;display:flex;align-items:center;gap:9px;}
+.thv.low{color:var(--g);}.thv.medium{color:var(--y);}.thv.high{color:var(--r);}
+.pu{width:9px;height:9px;border-radius:50%;}
+.pp{background:var(--g);animation:pg2 2s infinite;}
+.py{background:var(--y);animation:py 2s infinite;}
+.pr{background:var(--r);animation:pr 2s infinite;}
+@keyframes py{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.5)}50%{box-shadow:0 0 0 8px rgba(245,158,11,0)}}
+@keyframes pr{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}}
+.dtag{font-family:var(--mn);font-size:10px;color:var(--ac2);
+  background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);padding:3px 9px;border-radius:20px;}
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.sc{background:var(--bg2);border:1px solid var(--b1);border-radius:13px;padding:17px 19px;position:relative;}
+.sl{font-family:var(--mn);font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+.sv{font-size:32px;font-weight:800;line-height:1;}
+.ss{font-size:11px;color:var(--mu);margin-top:4px;}
+.si2{position:absolute;right:14px;top:14px;font-size:18px;opacity:.2;}
+.g32{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-bottom:18px;}
+.g22{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px;}
+.pc{background:var(--bg2);border:1px solid var(--b1);border-radius:14px;padding:19px 21px;}
+.pt{font-family:var(--mn);font-size:10px;color:var(--mu);text-transform:uppercase;
+  letter-spacing:1px;margin-bottom:15px;display:flex;align-items:center;justify-content:space-between;}
+.cw{position:relative;height:185px;}
+/* Gauge */
+.gw{display:flex;flex-direction:column;align-items:center;padding:4px 0 10px;}
+.gsvg{width:170px;height:95px;}
+.gn{font-size:34px;font-weight:800;text-align:center;margin-top:-4px;}
+.gl{font-family:var(--mn);font-size:10px;color:var(--mu);text-align:center;}
+.gbs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px;}
+.gb{text-align:center;padding:8px 5px;border-radius:8px;}
+.gb-a{background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.15);}
+.gb-o{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.15);}
+.gb-b{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.15);}
+.gbl{font-family:var(--mn);font-size:9px;margin-bottom:3px;text-transform:uppercase;}
+.gbv{font-size:16px;font-weight:800;}
+/* Feature bars */
+.fi2{margin-bottom:11px;}
+.fr{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;}
+.fn{color:var(--mu);font-family:var(--mn);font-size:10px;}
+.fpc{color:var(--tx);font-weight:700;}
+.ftr{height:3px;background:rgba(255,255,255,.06);border-radius:3px;}
+.ffl{height:100%;background:linear-gradient(90deg,var(--ac),var(--ac2));border-radius:3px;transition:width .9s cubic-bezier(.4,0,.2,1);}
+/* Country bars */
+.cl{display:flex;flex-direction:column;gap:8px;}
+.cr{display:flex;align-items:center;gap:8px;}
+.cn{font-size:11px;width:90px;flex-shrink:0;color:var(--mu);}
+.ct{flex:1;height:4px;background:rgba(255,255,255,.06);border-radius:3px;}
+.cf{height:100%;background:linear-gradient(90deg,var(--ac),var(--ac2));border-radius:3px;}
+.cc{font-family:var(--mn);font-size:10px;color:var(--mu);width:22px;text-align:right;}
+/* Evaluator */
+.eg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:13px;}
+.egrp label{font-family:var(--mn);font-size:10px;color:var(--mu);text-transform:uppercase;
+  letter-spacing:.8px;display:block;margin-bottom:5px;}
+.egrp select,.egrp input{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--b2);
+  border-radius:8px;padding:9px 11px;color:var(--tx);font-size:12px;font-family:var(--bd);
+  outline:none;transition:border-color .2s;}
+.egrp select:focus,.egrp input:focus{border-color:var(--ac);}
+.egrp select option{background:#0d1220;}
+.ebtn{width:100%;background:var(--ac);border:none;border-radius:9px;padding:11px;
+  color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;
+  box-shadow:0 4px 12px rgba(59,130,246,.28);}
+.ebtn:hover{background:#2563eb;}
+.smbtn{width:100%;background:transparent;border:1px solid var(--b2);border-radius:9px;
+  padding:9px;color:var(--mu);font-size:11px;font-family:var(--mn);cursor:pointer;
+  transition:all .2s;margin-top:8px;}
+.smbtn:hover{border-color:var(--ac2);color:var(--ac2);}
+.rc{background:rgba(255,255,255,.02);border:1px solid var(--b1);border-radius:11px;
+  padding:15px;margin-top:11px;display:none;}
+.rd{font-size:18px;font-weight:800;margin-bottom:4px;}
+.rm{font-family:var(--mn);font-size:11px;color:var(--mu);}
+.rm span{color:var(--tx);font-weight:700;}
+.fl{margin-top:11px;}
+.fli{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid rgba(59,130,246,.05);}
+.fli:last-child{border-bottom:none;}
+.fsv{font-family:var(--mn);font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700;white-space:nowrap;margin-top:2px;}
+.cr2{background:rgba(239,68,68,.2);color:#f87171;}
+.hi{background:rgba(245,158,11,.2);color:#fbbf24;}
+.me{background:rgba(59,130,246,.2);color:#93c5fd;}
+.lo{background:rgba(100,116,139,.2);color:#94a3b8;}
+.sa{background:rgba(34,197,94,.2);color:#4ade80;}
+.ft2 strong{display:block;font-size:12px;font-weight:600;}
+.ft2 small{color:var(--mu);font-size:11px;font-family:var(--mn);}
+/* Table */
+.et{width:100%;border-collapse:collapse;font-size:12px;}
+.et th{font-family:var(--mn);font-size:10px;color:var(--mu);text-align:left;
+  padding:7px 10px;border-bottom:1px solid var(--b1);text-transform:uppercase;letter-spacing:1px;font-weight:400;}
+.et td{padding:8px 10px;border-bottom:1px solid rgba(59,130,246,.05);vertical-align:middle;}
+.et tr:last-child td{border-bottom:none;}
+.et tr:hover td{background:rgba(255,255,255,.02);}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:5px;
+  font-family:var(--mn);font-size:10px;font-weight:700;}
+.ba{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.2);}
+.bo{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.2);}
+.bb{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.2);}
+.bv{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.2);font-size:9px;}
+.bf{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.2);font-size:9px;}
+.dot{width:5px;height:5px;border-radius:50%;}
+.da{background:#22c55e;}.do{background:#f59e0b;}.db{background:#3b82f6;}
+/* Filters */
+.filt{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+.filt-btn{background:transparent;border:1px solid var(--b2);border-radius:7px;padding:5px 13px;
+  color:var(--mu);font-size:10px;font-family:var(--mn);cursor:pointer;transition:all .2s;}
+.filt-btn:hover,.filt-btn.on{background:rgba(59,130,246,.12);border-color:var(--ac);color:var(--ac2);}
+.filt-btn.fa.on{background:rgba(34,197,94,.1);border-color:var(--g);color:var(--g);}
+.filt-btn.fo.on{background:rgba(245,158,11,.1);border-color:var(--y);color:var(--y);}
+.filt-btn.fb.on{background:rgba(239,68,68,.1);border-color:var(--r);color:var(--r);}
+.pg-ctrl{display:flex;gap:8px;align-items:center;margin-top:12px;}
+.pg-btn{background:transparent;border:1px solid var(--b2);border-radius:6px;padding:5px 12px;
+  color:var(--mu);font-size:11px;font-family:var(--mn);cursor:pointer;transition:all .2s;}
+.pg-btn:hover{border-color:var(--ac);color:var(--ac2);}
+.pg-btn:disabled{opacity:.4;cursor:not-allowed;}
+/* Analysis/Conclusion */
+.stat-big{font-size:38px;font-weight:800;line-height:1;margin-bottom:4px;}
+.stat-lbl{font-family:var(--mn);font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:1px;}
+.stat-sub{font-size:12px;color:var(--mu);margin-top:3px;}
+.conclusion-box{background:linear-gradient(135deg,rgba(59,130,246,.07),rgba(96,165,250,.04));
+  border:1px solid rgba(59,130,246,.2);border-radius:14px;padding:20px 24px;margin-bottom:16px;}
+.con-title{font-size:16px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.con-body{font-size:13px;color:#94a3b8;line-height:1.8;}
+.con-body strong{color:var(--tx);}
+.con-body .hl-g{color:var(--g);font-weight:700;}
+.con-body .hl-r{color:var(--r);font-weight:700;}
+.con-body .hl-y{color:var(--y);font-weight:700;}
+.sig-list{display:flex;flex-direction:column;gap:7px;}
+.sig-item{display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;background:rgba(255,255,255,.02);border-radius:8px;font-size:12px;}
+.sig-name{color:var(--mu);}
+.sig-cnt{font-family:var(--mn);font-size:11px;color:var(--ac2);}
+.hour-chart{display:flex;gap:3px;align-items:flex-end;height:60px;margin-top:8px;}
+.hour-bar{flex:1;background:rgba(59,130,246,.15);border-radius:3px 3px 0 0;min-height:3px;transition:all .3s;}
+.hour-bar.peak{background:rgba(239,68,68,.5);}
+/* Modal */
+.mbg{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.7);
+  display:none;align-items:center;justify-content:center;}
+.mbg.on{display:flex;}
+.mo{background:var(--bg2);border:1px solid var(--b2);border-radius:15px;
+  padding:28px 32px;width:100%;max-width:380px;position:relative;}
+.mtit{font-size:17px;font-weight:700;margin-bottom:18px;}
+.mc{position:absolute;top:14px;right:14px;background:transparent;border:none;
+  color:var(--mu);font-size:18px;cursor:pointer;line-height:1;}
+.mc:hover{color:var(--tx);}
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-thumb{background:rgba(59,130,246,.2);border-radius:3px;}
+@media(max-width:1100px){.sg{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.g3{grid-template-columns:1fr 1fr}}
+@media(max-width:800px){.g32,.g22,.g3{grid-template-columns:1fr}.db{padding:14px}.eg{grid-template-columns:1fr}.tnav{display:none}}
+</style>
+</head>
+<body>
+<div class="gbg"></div><div class="grd"></div>
+
+<!-- ══ LOGIN PAGE ══ -->
+<div class="pg on" id="pg-login">
+  <div class="brand">
+    <div class="bn">Smart<span>Guard</span></div>
+    <div class="bs">Adaptive Auth · Kaggle RBA · Live Location · v4.0</div>
+  </div>
+  <div class="login-wrap fi">
+    <div class="card lc">
+      <div class="tabs">
+        <button class="tab on" onclick="setTab('u')">👤 User Login</button>
+        <button class="tab" onclick="setTab('a')">🛡 Admin</button>
+      </div>
+      <!-- User -->
+      <div class="pn on" id="pn-u">
+        <!-- Live Location Badge -->
+        <div class="loc-badge" id="loc-badge">
+          <div class="loc-dot"></div>
+          <div class="loc-txt" id="loc-txt"><span class="sp" style="width:10px;height:10px;border-width:1.5px"></span> Detecting location...</div>
+        </div>
+        <div class="al ae" id="ue"></div>
+        <div class="grp"><label class="lbl">Email</label>
+          <input class="inp" id="ue2" type="email" placeholder="you@example.com" autocomplete="email"></div>
+        <div class="grp"><label class="lbl">Password</label>
+          <input class="inp" id="up" type="password" placeholder="Password" autocomplete="current-password"></div>
+        <div class="gr2">
+          <div class="grp"><label class="lbl">Country <span id="loc-auto-tag" style="color:var(--g);font-size:9px"></span></label>
+            <select class="inp" id="uc">
+              <option>United States</option><option>India</option><option>Germany</option>
+              <option>United Kingdom</option><option>France</option><option>Japan</option>
+              <option>China</option><option>Russia</option><option>Nigeria</option><option>Iran</option>
+              <option>Brazil</option><option>Canada</option><option>Australia</option>
+              <option>South Korea</option><option>Netherlands</option><option>Belarus</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="grp"><label class="lbl">Device</label>
+            <select class="inp" id="ud">
+              <option>Desktop</option><option>Mobile</option><option>Tablet</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn" id="ub" onclick="userLogin()">🔐 Secure Login →</button>
+        <div class="snote">🛡 AI evaluates each login using <strong style="color:var(--ac2)">Kaggle RBA Model</strong> (AUC 0.997).<br>
+          📍 Location auto-detected · 🔐 OTP via Gmail · 🚫 Auto-block threats</div>
+      </div>
+      <!-- Admin -->
+      <div class="pn" id="pn-a">
+        <div style="text-align:center;margin-bottom:18px;">
+          <span style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#fca5a5;
+            font-family:var(--mn);font-size:10px;padding:3px 11px;border-radius:20px;letter-spacing:1.5px">RESTRICTED</span>
+        </div>
+        <div class="al ae" id="ae2"></div>
+        <div class="grp"><label class="lbl">Username</label>
+          <input class="inp" id="au" type="text" placeholder="admin" autocomplete="username"></div>
+        <div class="grp"><label class="lbl">Password</label>
+          <input class="inp" id="ap" type="password" placeholder="Password" autocomplete="current-password"></div>
+        <button class="btn" id="ab" onclick="adminLogin()">Access Dashboard →</button>
+        <div class="snote">🔒 Secured via <strong style="color:var(--ac2)">PBKDF2 + JWT</strong>.<br>
+          Default: <code>admin</code> / <code>SmartGuard_Setup_2024</code></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ OTP VERIFICATION PAGE ══ -->
+<div class="pg" id="pg-otp">
+  <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;padding:36px 18px;">
+    <div class="card otp-wrap fi">
+      <div class="oi">🔐</div>
+      <div class="ot">Two-Factor Verification</div>
+      <div class="os">Risk Score: <strong id="or" style="color:var(--y)">--</strong>/100 · OTP sent to <span class="oem" id="oe">***</span></div>
+
+      <div class="sigs">
+        <div class="st">⚡ Risk Signals Detected</div>
+        <div id="osl"></div>
+      </div>
+
+      <div class="al ae" id="oe2"></div>
+      <div class="al ao" id="ook"></div>
+      <div class="al ai" id="odm"></div>
+
+      <!-- OTP Timer -->
+      <div class="otp-timer">⏱ Expires in <span id="otp-countdown">5:00</span></div>
+
+      <div class="oinps">
+        <input class="od" id="d0" maxlength="1" type="text" inputmode="numeric">
+        <input class="od" id="d1" maxlength="1" type="text" inputmode="numeric">
+        <input class="od" id="d2" maxlength="1" type="text" inputmode="numeric">
+        <input class="od" id="d3" maxlength="1" type="text" inputmode="numeric">
+        <input class="od" id="d4" maxlength="1" type="text" inputmode="numeric">
+        <input class="od" id="d5" maxlength="1" type="text" inputmode="numeric">
+      </div>
+
+      <button class="btn" id="vb" onclick="verifyOTP()">✅ Verify OTP →</button>
+      <div style="text-align:center;margin-top:14px;display:flex;justify-content:center;gap:18px;">
+        <button class="lnk" onclick="resendOTP()">🔄 Resend OTP</button>
+        <span style="color:var(--mu)">·</span>
+        <button class="lnk" onclick="backToLogin()">← Back to Login</button>
+      </div>
+
+      <!-- What happens explanation -->
+      <div style="margin-top:18px;padding:12px;background:rgba(59,130,246,.05);border:1px solid var(--b1);border-radius:9px;">
+        <div style="font-family:var(--mn);font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">ℹ WHY OTP?</div>
+        <div style="font-size:12px;color:var(--mu);line-height:1.7;">Your login shows <strong style="color:var(--y)">medium-to-high risk signals</strong> but is not conclusively malicious. OTP provides extra verification before granting access.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BLOCKED PAGE ══ -->
+<div class="pg" id="pg-block">
+  <div class="card blk-wrap fi">
+    <div class="blk-icon">🚫</div>
+    <div class="blk-title">Access Blocked</div>
+    <div class="risk-pill">⚠ Risk Score: <strong id="blk-risk">--</strong>/100</div>
+    <div class="blk-sub" id="blk-sub">Your login attempt has been flagged as high risk and blocked to protect this account.</div>
+    <div class="blk-reasons">
+      <div class="blk-r-title">🔴 Threat Signals</div>
+      <div id="blk-factors"></div>
+    </div>
+    <div style="background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.15);border-radius:9px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--mu);line-height:1.7;">
+      <strong style="color:#fca5a5;">What this means:</strong> Your IP, location, or behaviour matches known attack patterns in our Kaggle RBA threat database. If you believe this is an error, contact your administrator.
+    </div>
+    <button class="sbtn" onclick="backToLogin()" style="width:100%;text-align:center;">← Try Again / Contact Admin</button>
+  </div>
+</div>
+
+<!-- ══ SUCCESS PAGE ══ -->
+<div class="pg" id="pg-ok">
+  <div class="card okc fi">
+    <div class="oki">✅</div>
+    <div class="okt">Access Granted</div>
+    <div class="oks" id="okm">Welcome! Identity verified.</div>
+    <div class="pill" id="oku">👤 User</div><br>
+    <div style="margin-top:18px;padding:12px 16px;background:rgba(34,197,94,.05);border:1px solid rgba(34,197,94,.15);border-radius:10px;font-size:12px;color:var(--mu);line-height:1.8;">
+      <div style="font-family:var(--mn);font-size:10px;color:var(--g);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">🛡 Session Info</div>
+      <div>Risk Assessment: <strong style="color:var(--g)" id="ok-risk">--</strong></div>
+      <div>Location: <strong style="color:#94a3b8" id="ok-loc">--</strong></div>
+      <div>Method: <strong style="color:var(--ac2)" id="ok-method">Direct</strong></div>
+    </div>
+    <button class="sbtn" onclick="logoutUser()">← Logout</button>
+  </div>
+</div>
+
+<!-- ══ DASHBOARD ══ -->
+<div class="pg" id="pg-dash">
+  <div class="tb">
+    <div style="display:flex;align-items:center;gap:11px;">
+      <div class="tbl">Smart<span>Guard</span></div>
+      <div class="ld"></div>
+    </div>
+    <div class="tnav">
+      <button class="nb on" id="nb-ov" onclick="sec('ov')">📊 Overview</button>
+      <button class="nb" id="nb-ev" onclick="sec('ev')">⚡ Evaluator</button>
+      <button class="nb" id="nb-lg" onclick="sec('lg')">📋 Full History</button>
+      <button class="nb" id="nb-an" onclick="sec('an')">🔬 Analysis</button>
+    </div>
+    <div class="tbr">
+      <button class="pbtn" onclick="openPW()">🔑 Change PW</button>
+      <div style="display:flex;align-items:center;gap:7px;font-family:var(--mn);font-size:11px;color:var(--mu)">
+        <div class="av" id="dav">A</div><span id="dun">admin</span>
+      </div>
+      <button class="xbtn" onclick="logoutAdmin()">Logout</button>
+    </div>
+  </div>
+
+  <div class="db">
+    <!-- OVERVIEW -->
+    <div id="s-ov">
+      <div class="tbanner">
+        <div>
+          <div class="thlbl">Threat Level</div>
+          <div class="thv low" id="thv"><span class="pu pp" id="thd"></span><span id="tht">LOW</span></div>
+        </div>
+        <div style="text-align:right">
+          <div class="dtag">📊 Kaggle RBA Dataset</div>
+          <div style="font-family:var(--mn);font-size:10px;color:var(--mu);margin-top:5px" id="lup">—</div>
+        </div>
+      </div>
+      <div class="sg">
+        <div class="sc"><div class="sl">Total Events</div><div class="sv" id="st" style="color:var(--ac2)">—</div><div class="ss">ML analyzed</div><div class="si2">📊</div></div>
+        <div class="sc"><div class="sl">Allowed</div><div class="sv" id="sa" style="color:var(--g)">—</div><div class="ss">Direct access</div><div class="si2">✅</div></div>
+        <div class="sc"><div class="sl">OTP Required</div><div class="sv" id="so" style="color:var(--y)">—</div><div class="ss">Step-up auth</div><div class="si2">🔐</div></div>
+        <div class="sc"><div class="sl">Blocked</div><div class="sv" id="sb" style="color:var(--r)">—</div><div class="ss">Threats stopped</div><div class="si2">🚫</div></div>
+      </div>
+      <div class="g32">
+        <div class="pc"><div class="pt">Risk Timeline <span>last 30 events</span></div>
+          <div class="cw"><canvas id="tch"></canvas></div></div>
+        <div class="pc"><div class="pt">Avg Risk Score</div>
+          <div class="gw">
+            <svg class="gsvg" viewBox="0 0 170 95">
+              <path d="M12,85 A70,70 0 0,1 158,85" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="11" stroke-linecap="round"/>
+              <path id="ga" d="M12,85 A70,70 0 0,1 158,85" fill="none" stroke="#3b82f6" stroke-width="11" stroke-linecap="round" stroke-dasharray="220" stroke-dashoffset="220" style="transition:stroke-dashoffset 1.1s ease,stroke .5s"/>
+            </svg>
+            <div class="gn" id="gn" style="color:var(--ac2)">—</div>
+            <div class="gl">avg risk / 100</div>
+          </div>
+          <div class="gbs">
+            <div class="gb gb-a"><div class="gbl" style="color:var(--g)">ALLOW</div><div class="gbv" id="ga2" style="color:var(--g)">—</div></div>
+            <div class="gb gb-o"><div class="gbl" style="color:var(--y)">OTP</div><div class="gbv" id="go" style="color:var(--y)">—</div></div>
+            <div class="gb gb-b"><div class="gbl" style="color:var(--r)">BLOCK</div><div class="gbv" id="gb2" style="color:var(--r)">—</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="g22">
+        <div class="pc"><div class="pt">Top Countries</div><div class="cl" id="ccl"></div></div>
+        <div class="pc"><div class="pt">Feature Importance <span style="color:var(--ac2);font-size:9px">RBA MODEL</span></div>
+          <div id="fic"><div style="color:var(--mu);text-align:center;padding:28px;font-size:13px">Loading...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EVALUATOR -->
+    <div id="s-ev" style="display:none">
+      <div class="g22">
+        <div class="pc"><div class="pt">Live Evaluator (Kaggle Model)</div>
+          <div class="eg">
+            <div class="egrp"><label>Country</label>
+              <select id="ec">
+                <option>United States</option><option>China</option><option>Germany</option>
+                <option>India</option><option>United Kingdom</option><option>Russia</option>
+                <option>Nigeria</option><option>Iran</option><option>France</option><option>Brazil</option>
+              </select></div>
+            <div class="egrp"><label>Prev Country</label>
+              <select id="epc">
+                <option>United States</option><option>China</option><option>Germany</option>
+                <option>India</option><option>United Kingdom</option><option>Russia</option>
+                <option>Nigeria</option><option>Iran</option><option>France</option><option>Brazil</option>
+              </select></div>
+            <div class="egrp"><label>Device</label>
+              <select id="edev"><option>Desktop</option><option>Mobile</option><option>Tablet</option></select></div>
+            <div class="egrp"><label>Browser</label>
+              <select id="ebr"><option>Chrome</option><option>Firefox</option><option>Safari</option><option>Edge</option></select></div>
+            <div class="egrp"><label>OS</label>
+              <select id="eos"><option>Windows 10</option><option>Windows 11</option><option>macOS</option><option>Android</option><option>iOS</option><option>Linux</option></select></div>
+            <div class="egrp"><label>Network RTT (ms)</label>
+              <input type="number" id="ert" value="200" min="10" max="30000"></div>
+            <div class="egrp"><label>Failed Attempts</label>
+              <input type="number" id="efa" value="0" min="0" max="20"></div>
+            <div class="egrp"><label>Attack IP Flag</label>
+              <select id="eai"><option value="0">No (clean)</option><option value="1">Yes (flagged)</option></select></div>
+          </div>
+          <button class="ebtn" id="evb" onclick="adminEval()">⚡ Evaluate (Kaggle RBA Model)</button>
+          <button class="smbtn" onclick="runSim()">🔄 Simulate 25 Random Events</button>
+        </div>
+        <div class="pc"><div class="pt">Result</div>
+          <div id="rph" style="color:var(--mu);text-align:center;padding:50px;font-size:13px">Submit login to see ML analysis</div>
+          <div class="rc" id="rcd">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between">
+              <div><div class="rd" id="rrd">—</div><div class="rm">Risk: <span id="rrk">—</span>/100 · ML: <span id="rml">—</span>%</div></div>
+              <div style="text-align:right"><div class="rm" id="rip">—</div><div class="rm" id="rtm">—</div></div>
+            </div>
+            <div class="fl" id="fls"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FULL HISTORY -->
+    <div id="s-lg" style="display:none">
+      <div class="pc">
+        <div class="pt">Full Login History
+          <button onclick="loadHistory()" style="background:transparent;border:1px solid var(--b2);border-radius:5px;
+            padding:3px 10px;color:var(--mu);font-family:var(--mn);font-size:10px;cursor:pointer">↻ Refresh</button>
+        </div>
+        <div class="filt">
+          <span style="font-family:var(--mn);font-size:10px;color:var(--mu)">FILTER:</span>
+          <button class="filt-btn on" onclick="setHistFilter('')">All</button>
+          <button class="filt-btn fa" onclick="setHistFilter('ALLOW')">✅ Allowed</button>
+          <button class="filt-btn fo" onclick="setHistFilter('OTP')">🔐 OTP</button>
+          <button class="filt-btn fb" onclick="setHistFilter('BLOCK')">🚫 Blocked</button>
+          <span style="font-family:var(--mn);font-size:10px;color:var(--mu);margin-left:8px">Total: <strong id="hist-total" style="color:var(--ac2)">—</strong></span>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="et">
+            <thead><tr>
+              <th>#</th><th>User ID</th><th>Location</th><th>Device/Browser</th>
+              <th>OS</th><th>Risk</th><th>Decision</th><th>Outcome</th>
+              <th>Top Signal</th><th>RTT</th><th>Time</th>
+            </tr></thead>
+            <tbody id="hist-tbody">
+              <tr><td colspan="11" style="text-align:center;color:var(--mu);padding:36px;font-family:var(--mn);font-size:11px">Loading history...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pg-ctrl">
+          <button class="pg-btn" id="hist-prev" onclick="histPage(-1)" disabled>← Prev</button>
+          <span style="font-family:var(--mn);font-size:11px;color:var(--mu)" id="hist-pinfo">Page 1</span>
+          <button class="pg-btn" id="hist-next" onclick="histPage(1)">Next →</button>
+          <span style="font-family:var(--mn);font-size:10px;color:var(--mu);margin-left:8px">50 per page</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANALYSIS / CONCLUSION -->
+    <div id="s-an" style="display:none">
+      <div class="conclusion-box">
+        <div class="con-title">🔬 Security Analysis & Conclusions</div>
+        <div class="con-body" id="con-text">Loading analysis...</div>
+      </div>
+
+      <div class="g3">
+        <div class="pc">
+          <div class="pt">Risk Distribution</div>
+          <div id="risk-dist-chart" style="display:flex;flex-direction:column;gap:10px;">
+            <div class="fi2">
+              <div class="fr"><span class="fn">Low Risk (0–34)</span><span class="fpc" id="rd-low-pct">—%</span></div>
+              <div class="ftr"><div class="ffl" id="rd-low-bar" style="width:0%;background:linear-gradient(90deg,#22c55e,#4ade80)"></div></div>
+            </div>
+            <div class="fi2">
+              <div class="fr"><span class="fn">Medium Risk (35–69)</span><span class="fpc" id="rd-med-pct">—%</span></div>
+              <div class="ftr"><div class="ffl" id="rd-med-bar" style="width:0%;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div></div>
+            </div>
+            <div class="fi2">
+              <div class="fr"><span class="fn">High Risk (70–100)</span><span class="fpc" id="rd-hi-pct">—%</span></div>
+              <div class="ftr"><div class="ffl" id="rd-hi-bar" style="width:0%;background:linear-gradient(90deg,#ef4444,#f87171)"></div></div>
+            </div>
+          </div>
+          <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;">
+            <div style="padding:8px;background:rgba(34,197,94,.06);border-radius:8px;border:1px solid rgba(34,197,94,.1)">
+              <div style="font-size:20px;font-weight:800;color:var(--g)" id="an-allow">—</div>
+              <div style="font-family:var(--mn);font-size:9px;color:var(--mu)">ALLOWED</div>
+            </div>
+            <div style="padding:8px;background:rgba(245,158,11,.06);border-radius:8px;border:1px solid rgba(245,158,11,.1)">
+              <div style="font-size:20px;font-weight:800;color:var(--y)" id="an-otp">—</div>
+              <div style="font-family:var(--mn);font-size:9px;color:var(--mu)">OTP REQ.</div>
+            </div>
+            <div style="padding:8px;background:rgba(239,68,68,.06);border-radius:8px;border:1px solid rgba(239,68,68,.1)">
+              <div style="font-size:20px;font-weight:800;color:var(--r)" id="an-block">—</div>
+              <div style="font-family:var(--mn);font-size:9px;color:var(--mu)">BLOCKED</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pc">
+          <div class="pt">Top Threat Signals</div>
+          <div class="sig-list" id="sig-list">
+            <div style="color:var(--mu);font-size:12px;text-align:center;padding:20px">Loading...</div>
+          </div>
+        </div>
+
+        <div class="pc">
+          <div class="pt">Login Activity by Hour</div>
+          <div id="hour-wrap">
+            <div class="hour-chart" id="hour-chart"></div>
+            <div style="display:flex;justify-content:space-between;margin-top:5px;">
+              <span style="font-family:var(--mn);font-size:9px;color:var(--mu)">00:00</span>
+              <span style="font-family:var(--mn);font-size:9px;color:var(--mu)">12:00</span>
+              <span style="font-family:var(--mn);font-size:9px;color:var(--mu)">23:00</span>
+            </div>
+            <div style="margin-top:10px;font-family:var(--mn);font-size:10px;color:var(--mu)" id="peak-hour-info"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="g22">
+        <div class="pc">
+          <div class="pt">OTP Effectiveness</div>
+          <div id="otp-eff" style="display:flex;flex-direction:column;gap:12px;padding:4px 0;">
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px">
+                <span style="color:var(--mu)">OTP Verified ✅</span>
+                <span style="color:var(--g);font-family:var(--mn)" id="otp-ok-cnt">—</span>
+              </div>
+              <div class="ftr"><div class="ffl" id="otp-ok-bar" style="width:0%;background:linear-gradient(90deg,#22c55e,#4ade80)"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px">
+                <span style="color:var(--mu)">OTP Failed ❌</span>
+                <span style="color:var(--r);font-family:var(--mn)" id="otp-fail-cnt">—</span>
+              </div>
+              <div class="ftr"><div class="ffl" id="otp-fail-bar" style="width:0%;background:linear-gradient(90deg,#ef4444,#f87171)"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px">
+                <span style="color:var(--mu)">OTP Pending ⏳</span>
+                <span style="color:var(--y);font-family:var(--mn)" id="otp-pend-cnt">—</span>
+              </div>
+              <div class="ftr"><div class="ffl" id="otp-pend-bar" style="width:0%;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pc">
+          <div class="pt">Top Attack Countries</div>
+          <div class="cl" id="an-countries"></div>
+        </div>
+      </div>
+
+      <!-- Model info -->
+      <div class="conclusion-box" style="margin-top:0;border-color:rgba(59,130,246,.2)">
+        <div class="con-title">🤖 Model Performance</div>
+        <div class="con-body" id="model-info">Loading...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Change PW Modal -->
+<div class="mbg" id="pwm">
+  <div class="mo fi">
+    <button class="mc" onclick="closePW()">×</button>
+    <div class="mtit">🔑 Change Password</div>
+    <div class="al ae" id="pwe"></div>
+    <div class="al ao" id="pwo"></div>
+    <div class="grp"><label class="lbl">Current Password</label>
+      <input class="inp" type="password" id="pwo2" placeholder="Current password"></div>
+    <div class="grp"><label class="lbl">New Password (min 8)</label>
+      <input class="inp" type="password" id="pwn" placeholder="New password"></div>
+    <div class="grp"><label class="lbl">Confirm New</label>
+      <input class="inp" type="password" id="pwc" placeholder="Confirm"></div>
+    <button class="btn" onclick="submitPW()">Update Password</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const API = 'http://localhost:5050/api';
+let TOK='', SID='', TCH=null;
+let histOffset=0, histLimit=50, histFilter='', histTotal=0;
+let otpTimerInterval=null;
+let _locData = {}; // live location data
+
+const $ = id => document.getElementById(id);
+function showPg(id){ document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on')); $(id).classList.add('on'); }
+function al(id,msg,show=true){ const e=$(id); if(!e)return; e.textContent=msg; e.style.display=show?'block':'none'; }
+function setTab(t){
+  ['u','a'].forEach((x,i)=>{
+    document.querySelectorAll('.tab')[i].classList.toggle('on',x===t);
+    $('pn-'+x).classList.toggle('on',x===t);
+  });
+}
+function sec(s){
+  ['ov','ev','lg','an'].forEach(x=>{$('s-'+x).style.display=x===s?'':'none';});
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
+  $('nb-'+s)?.classList.add('on');
+  if(s==='ov'||s==='lg') loadDash();
+  if(s==='lg') loadHistory();
+  if(s==='an') loadAnalysis();
+}
+
+async function apiFetch(path, opts={}, tok=''){
+  opts.headers = {...(opts.headers||{}), 'Content-Type':'application/json'};
+  if(tok) opts.headers['Authorization'] = `Bearer ${tok}`;
+  const res = await fetch(API+path, opts);
+  const data = await res.json();
+  if(!res.ok) throw data;
+  return data;
+}
+
+// ══ LIVE LOCATION ══════════════════════════════════════════════════════════
+
+async function detectLocation(){
+  const badge = $('loc-badge'), txt = $('loc-txt');
+  // Step 1: Try browser GPS first
+  if(navigator.geolocation){
+    try{
+      const pos = await new Promise((res,rej)=>
+        navigator.geolocation.getCurrentPosition(res, rej, {timeout:5000, maximumAge:60000}));
+      // Got GPS coords — now reverse geocode via free API
+      const lat = pos.coords.latitude, lon = pos.coords.longitude;
+      try{
+        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+          {headers:{'User-Agent':'SmartGuard/4.0'}});
+        const geo = await r.json();
+        const country = geo.address?.country || 'Unknown';
+        const city    = geo.address?.city || geo.address?.town || geo.address?.village || '';
+        const region  = geo.address?.state || '';
+        _locData = {country, city, region, lat, lon, source:'gps'};
+        setLocationBadge(country, city, region, 'GPS', true);
+        setCountrySelect(country);
+        return;
+      } catch(e){ /* nominatim failed, fall to IP */ }
+      _locData = {country:'Unknown', city:'', region:'', lat, lon, source:'gps_coords'};
+    } catch(e){ /* GPS denied or timeout */ }
+  }
+  // Step 2: IP geolocation fallback
+  try{
+    const r = await fetch(API+'/location');
+    const geo = await r.json();
+    if(geo.ok){
+      _locData = {country:geo.country, city:geo.city, region:geo.region, lat:geo.lat, lon:geo.lon, source:'ip'};
+      setLocationBadge(geo.country, geo.city, geo.region, 'IP', true);
+      setCountrySelect(geo.country);
+      return;
+    }
+  } catch(e){}
+  // Step 3: Final fallback — manual
+  badge.classList.add('loc-warn');
+  txt.innerHTML = '⚠ <strong>Auto-detect failed</strong> — Select country manually';
+  _locData = {};
+}
+
+function setLocationBadge(country, city, region, method, success){
+  const badge=$('loc-badge'), txt=$('loc-txt');
+  const loc = [city, region, country].filter(Boolean).join(', ');
+  txt.innerHTML = `<strong>${loc}</strong> <span style="font-size:10px;opacity:.6">(${method})</span>`;
+  $('loc-auto-tag').textContent = '● AUTO';
+}
+
+function setCountrySelect(country){
+  const sel = $('uc');
+  const opts = Array.from(sel.options).map(o=>o.value);
+  // Exact match
+  if(opts.includes(country)){ sel.value = country; return; }
+  // Partial match
+  const match = opts.find(o=>o.toLowerCase().includes(country.toLowerCase()) || country.toLowerCase().includes(o.toLowerCase()));
+  if(match) sel.value = match;
+}
+
+// ══ USER LOGIN ════════════════════════════════════════════════════════════
+
+async function userLogin(){
+  const btn=$('ub'), email=$('ue2').value.trim().toLowerCase(), pass=$('up').value;
+  const country=$('uc').value, device=$('ud').value;
+  if(!email){ al('ue','Please enter your email'); return; }
+  al('ue','',false);
+  btn.disabled=true; btn.innerHTML='<span class="sp"></span>Analyzing risk...';
+
+  // Measure real RTT
+  const t0 = Date.now();
+  try{ await fetch(API+'/health',{cache:'no-store'}); }catch(e){}
+  const rtt = Date.now()-t0;
+
+  // Detect browser & OS
+  const ua = navigator.userAgent;
+  const browser = ua.includes('Firefox')?'Firefox':ua.includes('Edg')?'Edge':ua.includes('Safari')&&!ua.includes('Chrome')?'Safari':'Chrome';
+  const os = ua.includes('Win')?'Windows 10':ua.includes('Mac')?'macOS':ua.includes('Android')?'Android':ua.includes('iOS')||ua.includes('iPhone')?'iOS':'Linux';
+
+  const payload = {
+    email, password: pass,
+    country,
+    prev_country: country,
+    device,
+    browser, os, rtt_ms: rtt,
+    is_attack_ip: 0, failed_attempts: 0,
+    typing_kps: parseFloat((Math.random()*1.5+0.5).toFixed(2)),
+    prev_login_mins: Math.floor(Math.random()*1440+60),
+    // Location data from live detect
+    region:  _locData.region  || '',
+    city:    _locData.city    || '',
+    lat:     _locData.lat     || 0,
+    lon:     _locData.lon     || 0,
+    location_source: _locData.source || 'manual',
+  };
+
+  try{
+    const r = await apiFetch('/user/check', {method:'POST', body:JSON.stringify(payload)});
+    if(r.decision === 'ALLOW'){
+      showSucc(email.split('@')[0], 'direct', r.risk, country);
+    } else if(r.decision === 'OTP'){
+      SID = r.session_id;
+      showOTP(r);
+    } else {
+      showBlock(r);
+    }
+  } catch(e){
+    // Offline demo mode
+    demoCheck(email, country);
+  }
+  btn.disabled=false; btn.innerHTML='🔐 Secure Login →';
+}
+
+function demoCheck(email, country){
+  const hr=['Russia','Nigeria','Iran','China','Belarus','North Korea'].includes(country);
+  let risk = Math.floor(Math.random()*20+(hr?55:5)); risk=Math.min(risk,100);
+  if(risk>=70){
+    showBlock({risk, factors:[{s:hr?'High-Risk Country':'ML Anomaly',sev:'critical',d:`Country: ${country}`}]});
+  } else if(risk>=35){
+    const dotp=Math.floor(100000+Math.random()*900000).toString();
+    SID='demo-'+Date.now(); window._dotp=dotp;
+    showOTP({risk,masked_email:email[0]+'***@'+email.split('@')[1],demo_otp:dotp,
+      factors:[{s:hr?'High-Risk Country':'ML Anomaly',sev:'high',d:`Country: ${country}`}]});
+  } else {
+    showSucc(email.split('@')[0],'direct',risk,country);
+  }
+}
+
+function showBlock(r){
+  showPg('pg-block');
+  $('blk-risk').textContent = r.risk || r.risk_score || '--';
+  const cols={critical:'#f87171',high:'#fbbf24',medium:'#93c5fd',low:'#94a3b8',safe:'#4ade80'};
+  $('blk-factors').innerHTML = (r.factors||[]).map(f=>`
+    <div class="blk-item">
+      <span class="blk-sev sev-${f.sev||'medium'}">${(f.sev||'').toUpperCase()}</span>
+      <div><strong style="color:${cols[f.sev]||'#94a3b8'};font-size:12px">${f.s}</strong>
+        <div style="font-size:11px;color:var(--mu)">${f.d}</div></div>
+    </div>`).join('');
+}
+
+function showOTP(r){
+  showPg('pg-otp');
+  $('or').textContent = r.risk || '--';
+  $('oe').textContent = r.masked_email || '***';
+  const cols={critical:'#ef4444',high:'#f59e0b',medium:'#60a5fa',low:'#94a3b8',safe:'#22c55e'};
+  $('osl').innerHTML = (r.factors||[]).slice(0,4).map(f=>`
+    <div class="si"><span class="sd" style="background:${cols[f.sev]||'#64748b'}"></span>
+    <span><strong style="color:${cols[f.sev]}">${f.s}</strong> — ${f.d}</span></div>`).join('');
+  if(r.demo_otp) al('odm',`📋 DEMO MODE — Your OTP: ${r.demo_otp}`);
+  setupOTP();
+  startOTPTimer(300);
+  setTimeout(()=>$('d0').focus(), 80);
+}
+
+function startOTPTimer(seconds){
+  clearInterval(otpTimerInterval);
+  let left = seconds;
+  const el = $('otp-countdown');
+  otpTimerInterval = setInterval(()=>{
+    left--;
+    const m = Math.floor(left/60), s = left%60;
+    el.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+    if(left<=60) el.style.color='var(--r)';
+    if(left<=0){ clearInterval(otpTimerInterval); el.textContent='EXPIRED'; }
+  }, 1000);
+}
+
+function setupOTP(){
+  for(let i=0;i<6;i++){
+    const el=$('d'+i); el.value='';
+    el.oninput=e=>{const v=e.target.value.replace(/\D/g,'');e.target.value=v?v[0]:'';if(v&&i<5)$('d'+(i+1)).focus();};
+    el.onkeydown=e=>{if(e.key==='Backspace'&&!e.target.value&&i>0)$('d'+(i-1)).focus();};
+    el.onpaste=e=>{e.preventDefault();const t=(e.clipboardData||window.clipboardData).getData('text').replace(/\D/g,'');
+      for(let j=0;j<6&&j<t.length;j++){const d=$('d'+j);if(d)d.value=t[j];}$('d'+Math.min(t.length,5)).focus();};
+  }
+}
+
+async function verifyOTP(){
+  const otp=[0,1,2,3,4,5].map(i=>$('d'+i).value).join('');
+  if(otp.length<6){al('oe2','Enter all 6 digits');return;}
+  const btn=$('vb'); btn.disabled=true; btn.innerHTML='<span class="sp"></span>Verifying...';
+  al('oe2','',false);
+  if(SID.startsWith('demo-')){
+    if(otp===window._dotp){ clearInterval(otpTimerInterval); showSucc('Demo User','otp',null,'Demo'); }
+    else al('oe2','Wrong OTP. Check demo hint above.');
+    btn.disabled=false; btn.innerHTML='✅ Verify OTP →'; return;
+  }
+  try{
+    const r = await apiFetch('/user/verify-otp',{method:'POST',body:JSON.stringify({session_id:SID,otp})});
+    if(r.ok){ clearInterval(otpTimerInterval); showSucc('User','otp',null,''); }
+    else al('oe2',r.error||'Invalid OTP');
+  } catch(e){ al('oe2',e.error||'Verification failed'); }
+  btn.disabled=false; btn.innerHTML='✅ Verify OTP →';
+}
+
+async function resendOTP(){
+  if(SID.startsWith('demo-')){al('ook','Demo mode — check OTP hint above');return;}
+  try{
+    const r = await apiFetch('/user/resend-otp',{method:'POST',body:JSON.stringify({session_id:SID})});
+    al('ook',r.message||'OTP resent');
+    if(r.demo_otp) al('odm',`📋 New OTP: ${r.demo_otp}`);
+    startOTPTimer(300);
+    setTimeout(()=>al('ook','',false),4000);
+  } catch(e){ al('oe2','Resend failed'); }
+}
+
+function backToLogin(){ clearInterval(otpTimerInterval); showPg('pg-login'); ['oe2','ook','odm'].forEach(id=>al(id,'',false)); }
+
+function showSucc(name, how, risk, loc){
+  showPg('pg-ok');
+  $('oku').textContent = '👤 '+name;
+  $('okm').textContent = how==='otp'?`Welcome, ${name}! Identity verified via OTP.`:`Welcome, ${name}! Risk is low — direct access granted.`;
+  $('ok-risk').textContent = risk!=null ? `${risk}/100` : 'Low';
+  $('ok-loc').textContent = loc || (_locData.city ? `${_locData.city}, ${_locData.country}` : (_locData.country||'Unknown'));
+  $('ok-method').textContent = how==='otp'?'OTP Verified':'Direct (Low Risk)';
+}
+function logoutUser(){ $('ue2').value=''; $('up').value=''; showPg('pg-login'); }
+
+// ══ ADMIN ═══════════════════════════════════════════════════════════════════
+
+async function adminLogin(){
+  const btn=$('ab'), u=$('au').value.trim().toLowerCase(), p=$('ap').value;
+  if(!u||!p){al('ae2','Enter credentials');return;}
+  al('ae2','',false); btn.disabled=true; btn.innerHTML='<span class="sp"></span>Authenticating...';
+  try{
+    const r = await apiFetch('/auth/login',{method:'POST',body:JSON.stringify({username:u,password:p})});
+    TOK=r.token; sessionStorage.setItem('sgt',TOK);
+    enterDash(r.display_name||u);
+  } catch(e){ al('ae2',e.error||'Invalid credentials'); }
+  btn.disabled=false; btn.innerHTML='Access Dashboard →';
+}
+
+function enterDash(name){
+  $('dun').textContent=name; $('dav').textContent=name[0].toUpperCase();
+  showPg('pg-dash'); initChart(); loadDash(); loadFeatures();
+}
+function logoutAdmin(){
+  TOK=''; sessionStorage.removeItem('sgt');
+  $('au').value=''; $('ap').value='';
+  if(TCH){TCH.destroy();TCH=null;} showPg('pg-login');
+}
+
+// ══ DASHBOARD ═══════════════════════════════════════════════════════════════
+
+function initChart(){
+  if(TCH){TCH.destroy();TCH=null;}
+  TCH=new Chart($('tch').getContext('2d'),{
+    type:'line',
+    data:{labels:[],datasets:[{label:'Risk',data:[],borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.07)',
+      tension:0.4,fill:true,pointRadius:4,pointBorderColor:'transparent',
+      pointBackgroundColor:c=>{const v=c.parsed?.y||0;return v>=70?'#ef4444':v>=35?'#f59e0b':'#22c55e';}}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:'rgba(59,130,246,.06)'},ticks:{color:'#64748b',font:{size:10}},border:{color:'transparent'}},
+              y:{min:0,max:100,grid:{color:'rgba(59,130,246,.06)'},ticks:{color:'#64748b',font:{size:10}},border:{color:'transparent'}}}}
+  });
+}
+
+async function loadDash(){
+  if(!TOK) return;
+  try{
+    const d = await apiFetch('/admin/dashboard',{},TOK);
+    $('st').textContent=d.total; $('sa').textContent=d.allow; $('so').textContent=d.otp; $('sb').textContent=d.block;
+    $('ga2').textContent=d.allow; $('go').textContent=d.otp; $('gb2').textContent=d.block;
+    $('lup').textContent='Updated: '+new Date().toLocaleTimeString();
+    const tht=$('tht'),thv=$('thv'),thd=$('thd');
+    tht.textContent=d.threat; thv.className='thv '+d.threat.toLowerCase();
+    thd.className='pu '+(d.threat==='HIGH'?'pr':d.threat==='MEDIUM'?'py':'pp');
+    const avg=d.avg_risk||0;
+    $('gn').textContent=avg.toFixed(1);
+    const ga=$('ga'); ga.style.strokeDashoffset=220-(220*avg/100);
+    ga.style.stroke=avg>=70?'#ef4444':avg>=35?'#f59e0b':'#3b82f6';
+    if(TCH&&d.timeline?.length){
+      TCH.data.labels=d.timeline.map(t=>t.t);
+      TCH.data.datasets[0].data=d.timeline.map(t=>t.r);
+      TCH.update();
+    }
+    if(d.countries){
+      const en=Object.entries(d.countries).sort((a,b)=>b[1]-a[1]),mx=en[0]?.[1]||1;
+      $('ccl').innerHTML=en.slice(0,6).map(([c,v])=>`
+        <div class="cr"><span class="cn">${c}</span>
+        <div class="ct"><div class="cf" style="width:${(v/mx*100).toFixed(0)}%"></div></div>
+        <span class="cc">${v}</span></div>`).join('');
+    }
+    if(d.recent?.length) renderRecentTable(d.recent);
+  } catch(e){ console.warn(e); }
+}
+
+function renderRecentTable(evs){
+  // Only used for overview — overview doesn't have this table now, but keeping for compatibility
+}
+
+async function loadFeatures(){
+  if(!TOK) return;
+  try{
+    const d = await apiFetch('/admin/features',{},TOK);
+    const imps=d.importances||{};
+    const sorted=Object.entries(imps).sort((a,b)=>b[1]-a[1]),mx=sorted[0]?.[1]||1;
+    $('fic').innerHTML=sorted.map(([k,v])=>`
+      <div class="fi2">
+        <div class="fr"><span class="fn">${k}</span><span class="fpc">${(v*100).toFixed(1)}%</span></div>
+        <div class="ftr"><div class="ffl" style="width:${(v/mx*100).toFixed(1)}%"></div></div>
+      </div>`).join('');
+  } catch(e){}
+}
+
+// ══ FULL HISTORY ════════════════════════════════════════════════════════════
+
+async function loadHistory(){
+  if(!TOK) return;
+  try{
+    const url = `/admin/history?limit=${histLimit}&offset=${histOffset}${histFilter?'&decision='+histFilter:''}`;
+    const d = await apiFetch(url,{},TOK);
+    histTotal = d.total;
+    $('hist-total').textContent = histTotal;
+    renderHistoryTable(d.events);
+    updateHistPagination();
+  } catch(e){ console.warn('History error',e); }
+}
+
+function setHistFilter(f){
+  histFilter=f; histOffset=0;
+  document.querySelectorAll('.filt-btn').forEach(b=>b.classList.remove('on'));
+  const map={'':'filt-btn','ALLOW':'filt-btn fa','OTP':'filt-btn fo','BLOCK':'filt-btn fb'};
+  document.querySelectorAll('.filt-btn').forEach(b=>{
+    const txt=b.textContent.trim();
+    if((f===''&&txt==='All')||(f==='ALLOW'&&txt.includes('Allowed'))||(f==='OTP'&&txt.includes('OTP'))||(f==='BLOCK'&&txt.includes('Blocked')))
+      b.classList.add('on');
+  });
+  loadHistory();
+}
+
+function histPage(dir){
+  const newOff = histOffset + dir*histLimit;
+  if(newOff<0||newOff>=histTotal) return;
+  histOffset=newOff; loadHistory();
+}
+
+function updateHistPagination(){
+  const page=Math.floor(histOffset/histLimit)+1;
+  const pages=Math.ceil(histTotal/histLimit)||1;
+  $('hist-pinfo').textContent=`Page ${page} / ${pages}`;
+  $('hist-prev').disabled=histOffset<=0;
+  $('hist-next').disabled=(histOffset+histLimit)>=histTotal;
+}
+
+function renderHistoryTable(evs){
+  if(!evs||!evs.length){
+    $('hist-tbody').innerHTML=`<tr><td colspan="11" style="text-align:center;color:var(--mu);padding:36px;font-family:var(--mn);font-size:11px">No events found</td></tr>`;
+    return;
+  }
+  $('hist-tbody').innerHTML=evs.map((e,i)=>{
+    const cl=e.decision==='BLOCK'?'bb':e.decision==='OTP'?'bo':'ba';
+    const dc=e.decision==='BLOCK'?'db':e.decision==='OTP'?'do':'da';
+    const rs=e.risk||0, fc=rs>=70?'#ef4444':rs>=35?'#f59e0b':'#22c55e';
+    const uid=(e.user_id||'').substring(0,8)+'…';
+    const t=e.ts?new Date(e.ts).toLocaleString():'—';
+    const loc=[e.city,e.country].filter(Boolean).join(', ')||e.country||'—';
+    const rtt=e.rtt_ms?`${Math.round(e.rtt_ms)}ms`:'—';
+    // Outcome badge
+    let outBadge='<span style="color:var(--mu);font-size:10px">—</span>';
+    if(e.outcome==='otp_verified') outBadge='<span class="bv">✅ verified</span>';
+    else if(e.outcome==='otp_failed') outBadge='<span class="bf">❌ failed</span>';
+    else if(e.outcome==='blocked') outBadge='<span class="bf">🚫 blocked</span>';
+    else if(e.outcome==='allowed') outBadge='<span class="bv">✅ allowed</span>';
+    else if(e.outcome==='otp_pending') outBadge='<span style="color:var(--y);font-size:10px">⏳ pending</span>';
+    else if(e.outcome==='simulated') outBadge='<span style="color:var(--mu);font-size:10px">🔄 sim</span>';
+    // Location source badge
+    const locSrc=e.location_source==='gps'?'📍':e.location_source==='ip'?'🌐':'⌨';
+    return `<tr>
+      <td style="font-family:var(--mn);font-size:10px;color:var(--mu)">${histOffset+i+1}</td>
+      <td style="font-family:var(--mn);font-size:10px;color:var(--mu)">${uid}</td>
+      <td style="font-size:11px">${locSrc} ${loc}</td>
+      <td style="color:var(--mu);font-size:11px">${e.device||'—'} / ${e.browser||'—'}</td>
+      <td style="color:var(--mu);font-size:10px">${e.os||'—'}</td>
+      <td><div style="display:flex;align-items:center;gap:5px">
+        <div style="width:34px;height:3px;background:rgba(255,255,255,.06);border-radius:2px">
+          <div style="width:${rs}%;height:100%;background:${fc};border-radius:2px"></div></div>
+        <span style="font-family:var(--mn);font-size:11px;color:${fc}">${rs}</span></div></td>
+      <td><span class="badge ${cl}"><span class="dot ${dc}"></span>${e.decision}</span></td>
+      <td>${outBadge}</td>
+      <td style="font-size:11px;color:var(--mu)">${e.signal||'—'}</td>
+      <td style="font-family:var(--mn);font-size:10px;color:var(--mu)">${rtt}</td>
+      <td style="font-family:var(--mn);font-size:10px;color:var(--mu)">${t}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ══ ANALYSIS ════════════════════════════════════════════════════════════════
+
+async function loadAnalysis(){
+  if(!TOK) return;
+  try{
+    const d = await apiFetch('/admin/analysis',{},TOK);
+    if(!d.total){ $('con-text').innerHTML='<em>No events yet. Login attempts will appear here.</em>'; return; }
+
+    // Risk distribution bars
+    const tot=d.total;
+    const lpct=(d.risk_dist.low/tot*100).toFixed(1), mpct=(d.risk_dist.medium/tot*100).toFixed(1), hpct=(d.risk_dist.high/tot*100).toFixed(1);
+    $('rd-low-pct').textContent=lpct+'%'; $('rd-low-bar').style.width=lpct+'%';
+    $('rd-med-pct').textContent=mpct+'%'; $('rd-med-bar').style.width=mpct+'%';
+    $('rd-hi-pct').textContent=hpct+'%'; $('rd-hi-bar').style.width=hpct+'%';
+    $('an-allow').textContent=d.allow; $('an-otp').textContent=d.otp; $('an-block').textContent=d.block;
+
+    // Top signals
+    $('sig-list').innerHTML=(d.top_signals||[]).map(s=>`
+      <div class="sig-item"><span class="sig-name">${s.signal}</span><span class="sig-cnt">${s.count}×</span></div>`).join('')
+      ||'<div style="color:var(--mu);font-size:12px;text-align:center;padding:20px">No data</div>';
+
+    // Hourly chart
+    const hourlyMap={};
+    (d.hourly||[]).forEach(h=>hourlyMap[h.hour]=h.count);
+    const maxH=Math.max(...Object.values(hourlyMap),1);
+    $('hour-chart').innerHTML=Array.from({length:24},(_,i)=>{
+      const cnt=hourlyMap[i]||0;
+      const h=Math.max((cnt/maxH*100).toFixed(0),3);
+      const isPeak=cnt===maxH&&cnt>0;
+      return `<div class="hour-bar${isPeak?' peak':''}" style="height:${h}%" title="${i}:00 — ${cnt} events"></div>`;
+    }).join('');
+    if(d.peak_block_hour!=null) $('peak-hour-info').textContent=`⚠ Peak attack hour: ${d.peak_block_hour}:00`;
+
+    // OTP effectiveness
+    const otpTotal=d.otp||0;
+    const otpOk=d.otp_verified||0, otpFail=d.otp_failed||0, otpPend=Math.max(0,otpTotal-otpOk-otpFail);
+    $('otp-ok-cnt').textContent=otpOk; $('otp-fail-cnt').textContent=otpFail; $('otp-pend-cnt').textContent=otpPend;
+    $('otp-ok-bar').style.width=(otpTotal?otpOk/otpTotal*100:0)+'%';
+    $('otp-fail-bar').style.width=(otpTotal?otpFail/otpTotal*100:0)+'%';
+    $('otp-pend-bar').style.width=(otpTotal?otpPend/otpTotal*100:0)+'%';
+
+    // Top countries (attacks)
+    $('an-countries').innerHTML=(d.top_countries||[]).slice(0,6).map((c,i)=>{
+      const mx=d.top_countries[0]?.count||1;
+      return `<div class="cr"><span class="cn">${c.country}</span>
+        <div class="ct"><div class="cf" style="width:${(c.count/mx*100).toFixed(0)}%"></div></div>
+        <span class="cc">${c.count}</span></div>`;
+    }).join('');
+
+    // Model info
+    $('model-info').innerHTML=`
+      <strong>Algorithm:</strong> GradientBoostingClassifier (sklearn) ·
+      <strong>AUC-ROC:</strong> <span class="hl-g">${d.model_auc||'N/A'}</span> ·
+      <strong>Trained on:</strong> ${(d.trained_on||0).toLocaleString()} events ·
+      <strong>Dataset:</strong> ${d.dataset||'Kaggle RBA'}`;
+
+    // Generate conclusion text
+    generateConclusion(d);
+  } catch(e){ console.warn('Analysis error',e); $('con-text').innerHTML='<em>Analysis unavailable — check backend.</em>'; }
+}
+
+function generateConclusion(d){
+  const tot=d.total||1;
+  const bpct=d.block_pct||0, opct=d.otp_pct||0, apct=d.allow_pct||0;
+  const avgR=d.avg_risk||0;
+  const topSig=d.top_signals?.[0]?.signal||'N/A';
+  const topCtry=d.top_countries?.[0]?.country||'N/A';
+  const threatLevel=bpct>20?'<span class="hl-r">HIGH</span>':bpct>8?'<span class="hl-y">MODERATE</span>':'<span class="hl-g">LOW</span>';
+  const otpOkRate=d.otp>0?((d.otp_verified||0)/d.otp*100).toFixed(0):0;
+
+  $('con-text').innerHTML=`
+    Out of <strong>${tot.toLocaleString()}</strong> analyzed login events, the system granted direct access to
+    <span class="hl-g">${apct}%</span>, required OTP verification for
+    <span class="hl-y">${opct}%</span>, and blocked
+    <span class="hl-r">${bpct}%</span> as high-risk threats.
+    <br><br>
+    The overall threat level is ${threatLevel} with an average risk score of
+    <strong>${avgR}/100</strong> across all events.
+    The most common threat signal is <strong>${topSig}</strong>.
+    The highest-activity country is <strong>${topCtry}</strong>.
+    <br><br>
+    ${d.otp>0?`
+    Of <strong>${d.otp}</strong> OTP challenges sent, <span class="hl-g">${otpOkRate}%</span>
+    were successfully verified, demonstrating effective step-up authentication for medium-risk logins.
+    `:''}
+    ${bpct>15?`<br><strong style="color:var(--r)">⚠ Alert:</strong> Block rate exceeds 15% — consider reviewing IP blocklists and enabling stricter geo-restrictions.`:''}
+    ${avgR>50?`<br><strong style="color:var(--y)">⚠ Note:</strong> Average risk score is elevated (${avgR}/100). This may indicate active threat actor probing.`:''}
+    <br><br>
+    The Kaggle RBA model (AUC = <span class="hl-g">${d.model_auc||'N/A'}</span>) is the primary detection driver.
+    Attack IP Flag and Network RTT account for the most predictive signal weight in the model.`;
+}
+
+// ══ EVALUATOR ═══════════════════════════════════════════════════════════════
+
+async function adminEval(){
+  const btn=$('evb'); btn.disabled=true; btn.innerHTML='<span class="sp"></span>Running model...';
+  try{
+    const p={user_id:'eval',ip:`103.${Math.floor(Math.random()*254+1)}.x.x`,
+      country:$('ec').value,prev_country:$('epc').value,device:$('edev').value,
+      browser:$('ebr').value,os:$('eos').value,rtt_ms:+$('ert').value,
+      is_attack_ip:+$('eai').value,failed_attempts:+$('efa').value,
+      typing_kps:parseFloat((Math.random()*1.5+0.5).toFixed(2)),prev_login_mins:120};
+    const r = await apiFetch('/admin/evaluate',{method:'POST',body:JSON.stringify(p)},TOK);
+    showResult(r); await loadDash();
+  } catch(e){ alert('Evaluation failed — backend running?\n'+JSON.stringify(e)); }
+  btn.disabled=false; btn.innerHTML='⚡ Evaluate (Kaggle RBA Model)';
+}
+
+function showResult(r){
+  const rc=$('rcd'); $('rph').style.display='none'; rc.style.display='block'; rc.classList.add('fi');
+  const col=r.color||'#3b82f6'; rc.style.borderColor=col+'44';
+  $('rrd').textContent=r.label||r.decision; $('rrd').style.color=col;
+  $('rrk').textContent=r.risk||r.risk_score; $('rml').textContent=((r.ml_prob||0)*100).toFixed(1);
+  $('rip').textContent=r.masked_ip||'—'; $('rtm').textContent=r.timestamp?new Date(r.timestamp).toLocaleTimeString():'—';
+  const sc={critical:'cr2',high:'hi',medium:'me',low:'lo',safe:'sa'};
+  const sx={critical:'#f87171',high:'#fbbf24',medium:'#93c5fd',low:'#94a3b8',safe:'#4ade80'};
+  $('fls').innerHTML=(r.factors||[]).map(f=>`
+    <div class="fli">
+      <span class="fsv ${sc[f.sev]||'lo'}">${f.sev.toUpperCase()}</span>
+      <div class="ft2"><strong style="color:${sx[f.sev]||'#94a3b8'}">${f.s}</strong><small>${f.d}</small></div>
+    </div>`).join('');
+}
+
+async function runSim(){
+  const btn=document.querySelector('.smbtn');
+  btn.textContent='⏳ Simulating...'; btn.disabled=true;
+  try{
+    await apiFetch('/admin/simulate',{method:'POST',body:JSON.stringify({n:25})},TOK);
+    await loadDash(); btn.textContent='✅ Done!';
+    setTimeout(()=>{btn.textContent='🔄 Simulate 25 Random Events';btn.disabled=false;},2000);
+  } catch(e){ btn.textContent='🔄 Simulate 25 Random Events'; btn.disabled=false; alert('Backend offline?'); }
+}
+
+// ══ PASSWORD CHANGE ═══════════════════════════════════════════════════════
+
+function openPW(){ $('pwm').classList.add('on'); }
+function closePW(){ $('pwm').classList.remove('on'); ['pwo2','pwn','pwc'].forEach(id=>$(id).value=''); al('pwe','',false); al('pwo','',false); }
+async function submitPW(){
+  const old=$('pwo2').value,nw=$('pwn').value,cf=$('pwc').value;
+  al('pwe','',false); al('pwo','',false);
+  if(!old||!nw){al('pwe','All fields required');return;}
+  if(nw.length<8){al('pwe','Min 8 characters');return;}
+  if(nw!==cf){al('pwe','Passwords do not match');return;}
+  try{
+    await apiFetch('/admin/change-password',{method:'POST',body:JSON.stringify({old,new:nw})},TOK);
+    al('pwo','✅ Password changed!'); setTimeout(closePW,2000);
+  } catch(e){ al('pwe',e.error||'Failed'); }
+}
+
+// ══ KEYBOARD SHORTCUTS ════════════════════════════════════════════════════
+
+$('ap').addEventListener('keydown',e=>{if(e.key==='Enter')adminLogin();});
+$('up').addEventListener('keydown',e=>{if(e.key==='Enter')userLogin();});
+$('ue2').addEventListener('keydown',e=>{if(e.key==='Enter')$('up').focus();});
+
+// Auto-refresh dashboard
+setInterval(()=>{if(TOK&&$('s-ov').style.display!=='none')loadDash();},45000);
+
+// Auto-restore session
+window.addEventListener('load', async()=>{
+  TOK=sessionStorage.getItem('sgt')||'';
+  if(TOK){
+    try{
+      const r=await apiFetch('/auth/verify',{},TOK);
+      if(r.valid){enterDash(r.username);return;}
+    } catch(e){}
+    TOK=''; sessionStorage.removeItem('sgt');
+  }
+  // Start location detection on login page
+  detectLocation();
+});
+</script>
+</body>
+</html>
