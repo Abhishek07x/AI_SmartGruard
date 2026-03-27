@@ -102,7 +102,6 @@ SmartGuard/
 ├── data/
 │   ├── smartguard.db       # SQLite database (auto-created on first run)
 │   └── smartguard_dataset.csv  # Training data (auto-generated)
-├── .env                    # Your configuration (copy from .env.example)
 ├── .env.example            # Config template
 └── start.sh                # One-click startup script
 ```
